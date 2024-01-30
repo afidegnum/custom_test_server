@@ -30,7 +30,15 @@ openapiv3 = "2.0.0"
 # [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 [target.'cfg(engine)'.dependencies]
 config = "0.13.1"
+actix-web = { version = "4.3.1", default-features = false, features = [
+  "macros",
+  "cookies",
+  "secure-cookies",
+] }
 perseus-actix-web = { version = "0.4.2", features = ["dflt-server"] }
+actix-session = { version = "0.9.0", features = ["cookie-session"] }
+deadpool-postgres = { version = "0.12.1", features = ["serde"] }
+time = "0.3.31"
 hyper = { version = "1.1.0", features = ["full"] }
 pretty_env_logger = "0.5"
 hyperlocal = "0.8"
@@ -49,11 +57,7 @@ futures-util = { version = "0.3", default-features = false }
 reqwest = { version = "0.11", features = ["json"] }
 # reqwasm = "0.4.1"
 # tokio = { version = "1.21.1", features = ["macros", "rt", "rt-multi-thread"] }
-actix-web = { version = "4.3.1", default-features = false, features = [
-  "macros",
-  "cookies",
-  "secure-cookies",
-] }
+
 # [target.'cfg(target_arch = "wasm32")'.dependencies]
 [target.'cfg(client)'.dependencies]
 lol_alloc = "0.4.0"

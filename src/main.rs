@@ -6,6 +6,11 @@ use serde::{Deserialize, Serialize};
 
 #[cfg(engine)]
 use actix_web::{get, web, App, HttpRequest, HttpResponse, HttpServer};
+pub mod configs;
+use crate::configs::Config;
+use actix_session::{config::PersistentSession, storage::CookieSessionStore, SessionMiddleware};
+use actix_web::cookie::Key;
+use time::Duration;
 
 #[derive(Debug, Serialize, Clone, Deserialize)]
 struct MyObj {
@@ -47,13 +52,30 @@ pub async fn dflt_server<
     opts: perseus::server::ServerOptions,
     (host, port): (String, u16),
 ) {
+    use actix_web::middleware;
     use futures::{executor::block_on, Future};
     use perseus_actix_web::configurer;
-    use std::time::Duration;
     println!("{:#?} | {:#?} | {:#?} | {:#?}", host, port, turbine, opts);
+
+    let config = Config::from_env().unwrap();
+    let domain: String = std::env::var("DOMAIN").unwrap_or_else(|_| "localhost".to_owned());
 
     HttpServer::new(move || {
         App::new()
+            .wrap(
+                SessionMiddleware::builder(
+                    CookieSessionStore::default(),
+                    Key::from(config.srv_cnf.secret_key.as_bytes()),
+                )
+                .session_lifecycle(PersistentSession::default().session_ttl(Duration::days(1)))
+                .cookie_name("session".to_owned())
+                .cookie_secure(false)
+                .cookie_domain(Some(domain.clone()))
+                .cookie_path("/".to_owned())
+                .build(),
+            )
+            // enable logger
+            .wrap(middleware::Logger::default())
             .service(index)
             .service(hello)
             .configure(block_on(configurer(turbine, opts.clone())))
