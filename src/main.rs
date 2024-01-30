@@ -6,10 +6,13 @@ use serde::{Deserialize, Serialize};
 
 #[cfg(engine)]
 use actix_web::{get, web, App, HttpRequest, HttpResponse, HttpServer};
+#[cfg(engine)]
 pub mod configs;
-use crate::configs::Config;
+#[cfg(engine)]
 use actix_session::{config::PersistentSession, storage::CookieSessionStore, SessionMiddleware};
+#[cfg(engine)]
 use actix_web::cookie::Key;
+#[cfg(engine)]
 use time::Duration;
 
 #[derive(Debug, Serialize, Clone, Deserialize)]
@@ -52,13 +55,15 @@ pub async fn dflt_server<
     opts: perseus::server::ServerOptions,
     (host, port): (String, u16),
 ) {
+    use crate::configs::Config;
     use actix_web::middleware;
+    use dotenv::dotenv;
     use futures::{executor::block_on, Future};
     use perseus_actix_web::configurer;
-    println!("{:#?} | {:#?} | {:#?} | {:#?}", host, port, turbine, opts);
-
+    dotenv().ok();
     let config = Config::from_env().unwrap();
-    let domain: String = std::env::var("DOMAIN").unwrap_or_else(|_| "localhost".to_owned());
+    let domain: String = std::env::var("DOMAIN").unwrap_or_else(|_| "front.cookie".to_owned());
+    println!("{:#?} | {:#?} | {:#?} | {:#?}", host, port, turbine, opts);
 
     HttpServer::new(move || {
         App::new()
@@ -68,7 +73,7 @@ pub async fn dflt_server<
                     Key::from(config.srv_cnf.secret_key.as_bytes()),
                 )
                 .session_lifecycle(PersistentSession::default().session_ttl(Duration::days(1)))
-                .cookie_name("session".to_owned())
+                .cookie_name("perseussession".to_owned())
                 .cookie_secure(false)
                 .cookie_domain(Some(domain.clone()))
                 .cookie_path("/".to_owned())
