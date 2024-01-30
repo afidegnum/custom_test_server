@@ -1,12 +1,67 @@
 use perseus::prelude::*;
+use serde::{Deserialize, Serialize};
 use sycamore::prelude::*;
 
-fn about_page<G: Html>(cx: Scope) -> View<G> {
+use crate::global_state::*;
+
+#[derive(Serialize, Deserialize, Clone, ReactiveState)]
+#[rx(alias = "AboutPageStateRx")]
+struct AboutPageState {
+    req: String,
+}
+
+fn about_view<G: Html>(cx: Scope) -> View<G> {
+    let AppStateRx { auth } = Reactor::<G>::from_cx(cx).get_global_state::<AppStateRx>(cx);
+    let AuthDataRx {
+        state,
+        username,
+        req,
+    } = auth;
+    // This isn't part of our data model because it's only used here to pass to the
+    // login function
+    let entered_username = create_signal(cx, String::new());
+
+    // We have to trigger this from outside the `create_memo`, and we should only be
+    // interacting with storage APIs in the browser (otherwise this would be called
+    // on the server too) This will only cause a block on the first load,
+    // because this function just returns straight away if the state is already
+    // known
+    #[cfg(client)]
+    auth.detect_state();
+
     view! { cx,
-        p { "About." }
+        (
+            match *state.get() {
+                LoginState::Yes => {
+                    let username = username.get();
+                    view! { cx,
+                            h1 { (format!("Welcome back, {}!", &username)) }
+                            button(on:click =  |_| {
+                                #[cfg(client)]
+                                auth.logout();
+                            }) { "Logout" }
+                    }
+                }
+                // You could also redirect the user to a dedicated login page
+                LoginState::No => view! { cx,
+                    h1 { "Welcome, stranger!" }
+                    input(bind:value = entered_username, placeholder = "Username")
+                    button(on:click = |_| {
+                        #[cfg(client)]
+                        auth.login(&entered_username.get())
+                    }) { "Login" }
+                },
+                // This will appear for a few moments while we figure out if the user is logged in or not
+                LoginState::Server => View::empty(),
+            }
+        )
+
+        p { (format!("The Req: {:#?}", req.get())) }
+        br()
+        a(href = "about") { "About" }
     }
 }
 
 pub fn get_template<G: Html>() -> Template<G> {
-    Template::build("about").view(about_page).build()
+    Template::build("about").view(about_view).build()
 }
